@@ -1,19 +1,40 @@
 # SOL TRANSFERS
-This app transfers any token and amount of the solana blockchain from a private key to several public addresses. On the `data` folder you will find a file called `mints-mainnet.txt`, on this file you can find mint addresses of some coins of the solana blockchain, if you need the mint address of a coin that is not there you can go to https://coingecko.com and there you can search for the coin you need to get the mint adress.
 
-> [!WARNING]
-> If you want to get a mint of a token, you have to make sure that the mint adress is from the solana blockchain.
+This app make transfers of SOL or SPL-tokens, from an origin wallet to a set of solana addresses. This scripts will work only for the Solana blockchain.
+
 
 ### REQUIREMENTS
+
 * Node.js v20.12.2
 * npm.js v10.5.0
 
-### CONFIGURATION
-1. `npm install`
-2. In case you have a seed phrase of 12 words of phantom, there is a script that gives you the private key and the public adress (you will only need the private key) for the next step. To run the script you can either run `npm run seedPhrase` or `node scripts/seedPhraseToPrivateKey.js`
-3. Encript your private key with a password so no one can see it:
-    `npm run encode` or `node scripts/privateKeyEncoder.js --encode`
-4. In the directory `data` you will find a json file called `inputData.json`, in this file you have to add the reciever address/addresses, the mint of the token and the amount e.g:
+### CONFIGURATION AND SET-UP
+
+1. Initialize and load libraries 
+
+    `npm install`
+
+2. (Optional) In case you don't have the private key, but you do have the seed phrase, there is a script that derives the private key and the public adress (you will only need the private key) from the seed phrase. To do that, run the script: 
+
+    `npm run seedPhrase` 
+
+3. Encript your private key with a password so no one can see it. To do so, run the script:
+
+    `npm run encode`
+
+4. Set the recipients addresses, the tokens to transfer, and the ammounts. In the directory `data` you will find a json file called `inputData.json.example`. Rename it to `inputData.json` and include the target addresses for the transfers.
+
+This part is tricky.
+
+To identify the Token you want to transfer, you will identify the token using the token "mint address", or the "contract address". On the `data/mints-mainnet.txt`, you can find some examples for some tokens. Warning: by the time you read this, they may be outdated.
+
+You can find the token smart contract (mint) address, in CoinGecko:
+    - Go to https://www.coingecko.com/
+    - Search for the token (for example USDC) --> https://www.coingecko.com/en/coins/usdc
+    - On the Info section --> contract --> Select the Solana address for the token
+
+Here's an example of the inputData.json file, transfer 12 JUP to ADDRESS_1, 5 SOL to ADDRESS_2, and 100 USDC to ADDRESS_2
+
 ```json
 [
     {
@@ -38,8 +59,7 @@ This app transfers any token and amount of the solana blockchain from a private 
 > [!IMPORTANT] 
 > Solana doesn't have a mint address so on the TOKEN_MINT in the json file just put "SOLANA" and it will make the transfer with solana just like it would with any other token
 
-### USE
-Once you have configured the app with your own needs you have to run `npm start` or `node scripts/main.js` to transfer the USDC to the public addresses 
+### MAKE TRANSFERS
+Once you have initialized the app and set everything up, to execute the transfers you just needs you have to run:
 
-> [!TIP]
-> If you need to paste anything like the private key or the seed phrase just press right click or right click and then paste
+    `npm start`
