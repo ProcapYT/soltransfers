@@ -1,5 +1,10 @@
 import crypto from "node:crypto";
 import fs from "node:fs/promises";
+import readline from "node:readline";
+import { jsonName, folderName, fileName } from "./constants.cjs";
+import path from "node:path";
+import sc from "samcolors";
+import { ERROR } from "./customLogs.js";
 
 function generateKey(password, salt) {
     return crypto.pbkdf2Sync(password, salt, 100000, 32, "sha256");
@@ -40,7 +45,7 @@ function decodeText({ salt, iv, tag, data }, password) {
             decipher.final(),
         ]);
     } catch {
-        console.error("ERROR! Wrong password");
+        ERROR("Wrong password");
         process.exit(1);
     }
 
@@ -65,7 +70,54 @@ export async function encodeFile(text, encodedFilePath, jsonPath, password) {
 export async function decodeFile(encodedFilePath, jsonPath, password) {
     const encodedFileContent = await fs.readFile(encodedFilePath, "utf-8");
     const jsonContent = JSON.parse(await fs.readFile(jsonPath, "utf-8"));
+
+    await checkFileExistance(encodedFilePath);
+    await checkFileExistance(jsonPath);
     
     const decoding = decodeText({ salt: jsonContent.salt, iv: jsonContent.iv, tag: jsonContent.tag, data: encodedFileContent }, password);
     return decoding;
+}
+
+async function checkFileExistance(filePath) {
+    try {
+        await fs.access(filePath, fs.constants.F_OK);
+    } catch {
+        ERROR(`File not found in ${sc.yellow(filePath)}`);
+        process.exit(1);
+    }
+}
+
+async function dirExists(path) {
+    try {
+        await fs.access(path, fs.constants.F_OK);
+        return true;
+    } catch {
+        return false;
+    }
+}
+
+export async function input(question) {
+    const rl = readline.createInterface({
+        input: process.stdin,
+        output: process.stdout,
+    });
+
+    return await new Promise((resolve) => {
+        rl.question(question, (answer) => {
+            rl.close();
+            resolve(answer);
+        });
+    });
+}
+
+if (process.argv[2] == "--encode") {
+    if (!await dirExists(path.join(process.cwd(), folderName))) {
+        await fs.mkdir(folderName);
+    }
+    
+    await encodeFile(
+        await input("Private key: "), path.join(process.cwd(), folderName, fileName), 
+        path.join(process.cwd(), folderName, jsonName), 
+        await input("Password: ")
+    );
 }

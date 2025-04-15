@@ -1,0 +1,12 @@
+[
+    {
+        "address": "ADDRESS_1",
+        "TOKEN_MINT": "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v",
+        "amount": 0.01
+    },
+    {
+        "address": "ADDRESS_2",
+        "TOKEN_MINT": "SOLANA",
+        "amount": 0.0001
+    }
+]
