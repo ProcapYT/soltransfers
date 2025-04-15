@@ -12,15 +12,21 @@ This app make transfers of SOL or SPL-tokens, from an origin wallet to a set of 
 
 1. Initialize and load libraries 
 
-    `npm install`
+```bash
+npm install
+```
 
 2. (Optional) In case you don't have the private key, but you do have the seed phrase, there is a script that derives the private key and the public adress (you will only need the private key) from the seed phrase. To do that, run the script: 
 
-    `npm run seedPhrase` 
+```bash
+npm run seedPhrase    
+``` 
 
 3. Encript your private key with a password so no one can see it. To do so, run the script:
 
-    `npm run encode`
+```bash
+npm run encode
+```
 
 4. Set the recipients addresses, the tokens to transfer, and the ammounts. In the directory `data` you will find a json file called `inputData.json.example`. Rename it to `inputData.json` and include the target addresses for the transfers.
 
@@ -62,4 +68,6 @@ Here's an example of the inputData.json file, transfer 12 JUP to ADDRESS_1, 5 SO
 ### MAKE TRANSFERS
 Once you have initialized the app and set everything up, to execute the transfers you just needs you have to run:
 
-    `npm start`
+```bash
+npm start
+```
