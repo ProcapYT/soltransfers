@@ -10,7 +10,7 @@
     "seedPhrase": "node scripts/seedPhraseToPrivateKey.js"
   },
   "keywords": [],
-  "author": "",
+  "author": "Samuel Pedrera",
   "license": "ISC",
   "dependencies": {
     "@solana/spl-token": "^0.4.13",
