@@ -5,6 +5,7 @@ import { jsonName, folderName, fileName } from "./constants.cjs";
 import path from "node:path";
 import sc from "samcolors";
 import { ERROR } from "./customLogs.js";
+import { input } from "./input.js";
 
 function generateKey(password, salt) {
     return crypto.pbkdf2Sync(password, salt, 100000, 32, "sha256");
@@ -96,28 +97,15 @@ async function dirExists(path) {
     }
 }
 
-export async function input(question) {
-    const rl = readline.createInterface({
-        input: process.stdin,
-        output: process.stdout,
-    });
-
-    return await new Promise((resolve) => {
-        rl.question(question, (answer) => {
-            rl.close();
-            resolve(answer);
-        });
-    });
-}
-
 if (process.argv[2] == "--encode") {
     if (!await dirExists(path.join(process.cwd(), folderName))) {
         await fs.mkdir(folderName);
     }
     
     await encodeFile(
-        await input("Private key: "), path.join(process.cwd(), folderName, fileName), 
+        await input("Private key: ", true), 
+        path.join(process.cwd(), folderName, fileName), 
         path.join(process.cwd(), folderName, jsonName), 
-        await input("Password: ")
+        await input("Security password: ", true)
     );
 }

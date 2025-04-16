@@ -15,7 +15,8 @@ import {
     getMint,
 } from "@solana/spl-token";
 
-import { decodeFile, input } from "./privateKeyEncoder.js";
+import { decodeFile } from "./privateKeyEncoder.js";
+import { input } from "./input.js";
 import { jsonName, fileName, folderName, addressesJsonPath } from "./constants.cjs";
 import path from "node:path";
 import fs from "node:fs/promises";
@@ -45,7 +46,7 @@ dotenv.config();
 // Decode private key file with password
 const jsonPath = path.join(process.cwd(), folderName, jsonName);
 const privateKeyFilePath = path.join(process.cwd(), folderName, fileName);
-const password = await input("Private key password: ");
+const password = await input("Security password: ", true);
 const privateKey = await decodeFile(privateKeyFilePath, jsonPath, password);
 
 // sender data
