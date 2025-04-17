@@ -2,7 +2,7 @@ import bip39 from "bip39";
 import ed25519 from "ed25519-hd-key";
 import bs58 from "bs58";
 import { Keypair } from "@solana/web3.js";
-import { input } from "./privateKeyEncoder.js";
+import { input } from "./input.js";
 import sc from "samcolors";
 
 const derivationPath = "m/44'/501'/0'/0'";  // Phantom uses this
