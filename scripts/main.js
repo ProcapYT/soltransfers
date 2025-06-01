@@ -23,7 +23,7 @@ import fs from "node:fs/promises";
 import { TokenListProvider } from "solana-token-list";
 import sc from "samcolors";
 import dns from "node:dns/promises";
-import { LOG, ERROR } from "./customLogs.js";
+import { LOG, ERROR, WARN } from "./customLogs.js";
 
 // Check if the user has internet connection
 async function hasInternet() {
@@ -114,12 +114,11 @@ async function sendToken(senderKeypair, receiverWallet, TOKEN_MINT, amount) {
                 lastValidBlockHeight,
             }
         );
-
-        console.log(sc.bold(sc.green("COMPLETED: ")) + "Transaction successfully made!");
     } catch (err) {
         handleTransactionErrors(err);
-        return null;
     }
+
+    console.log(sc.bold(sc.green("COMPLETED: ")) + "Transaction successfully made!");
 
     return signature;
 }
@@ -151,11 +150,11 @@ async function sendSOL(senderKeypair, receiverWallet, amount) {
                 lastValidBlockHeight
             }
         );
-
-        console.log(sc.bold(sc.green("COMPLETED: ")) + "Transaction successfully made!");
     } catch (err) {
         handleTransactionErrors(err);
     }
+
+    console.log(sc.bold(sc.green("COMPLETED: ")) + "Transaction successfully made!");
 
     return signature;
 }
@@ -170,22 +169,22 @@ function handleTransactionErrors(err) {
     const fullError = err.stack ?? err.toString();
 
     if (fullError.includes("TransactionExpiredBlockheightExceededError"))
-        ERROR("Blockhash expired before the transaction was confirmed");
+        WARN("Blockhash expired before the transaction was confirmed");
 
     else if (fullError.includes("BlockhashNotFound"))
-        ERROR("Blockhash not found");
+        terminalError("Blockhash not found");
 
     else if (fullError.includes("custom program error"))
-        ERROR("The program had an error in the execution");
+        terminalError("The program had an error in the execution");
 
     else if (fullError.includes("Transaction signature verification failure"))
-        ERROR("Problem in the verification of the signature");
+        terminalError("Problem in the verification of the signature");
 
     else if (fullError.includes("Missing signature for fee payer"))
-        ERROR("No fee payer found in the list");
+        WARN("No fee payer found in the list");
 
     else if (fullError.includes("429") || fullError.includes("Too many requests"))
-        ERROR("You are making to many requests to the RPC");
+        terminalError("You are making to many requests to the RPC");
 
     else {
         ERROR("Unknown error");
