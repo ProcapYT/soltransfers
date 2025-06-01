@@ -116,8 +116,9 @@ async function sendToken(senderKeypair, receiverWallet, TOKEN_MINT, amount) {
         );
 
         console.log(sc.bold(sc.green("COMPLETED: ")) + "Transaction successfully made!");
-    } catch(err) {
+    } catch (err) {
         handleTransactionErrors(err);
+        return null;
     }
 
     return signature;
@@ -142,17 +143,17 @@ async function sendSOL(senderKeypair, receiverWallet, amount) {
 
     try {
         signature = await sendAndConfirmTransaction(
-            connection, 
-            transaction, 
-            [senderKeypair], 
-            { 
-                blockhash, 
-                lastValidBlockHeight 
+            connection,
+            transaction,
+            [senderKeypair],
+            {
+                blockhash,
+                lastValidBlockHeight
             }
         );
 
         console.log(sc.bold(sc.green("COMPLETED: ")) + "Transaction successfully made!");
-    } catch(err) {
+    } catch (err) {
         handleTransactionErrors(err);
     }
 
@@ -167,27 +168,29 @@ async function getTokenDecimals(MINT) {
 function handleTransactionErrors(err) {
     ERROR("Error sending or confirming transaction");
     const fullError = err.stack ?? err.toString();
-    
-    if (fullError.includes("TransactionExpiredBlockheightExceededError")) 
+
+    if (fullError.includes("TransactionExpiredBlockheightExceededError"))
         ERROR("Blockhash expired before the transaction was confirmed");
 
-    if (fullError.includes("BlockhashNotFound"))
+    else if (fullError.includes("BlockhashNotFound"))
         ERROR("Blockhash not found");
 
-    if (fullError.includes("custom program error"))
+    else if (fullError.includes("custom program error"))
         ERROR("The program had an error in the execution");
 
-    if (fullError.includes("Transaction signature verification failure"))
+    else if (fullError.includes("Transaction signature verification failure"))
         ERROR("Problem in the verification of the signature");
 
-    if (fullError.includes("Missing signature for fee payer"))
+    else if (fullError.includes("Missing signature for fee payer"))
         ERROR("No fee payer found in the list");
 
-    if (fullError.includes("429") || fullError.includes("Too many requests"))
+    else if (fullError.includes("429") || fullError.includes("Too many requests"))
         ERROR("You are making to many requests to the RPC");
 
-    ERROR("Unknown error");
-    console.error(err.message);
+    else {
+        ERROR("Unknown error");
+        console.error(err.message);
+    }
 }
 
 function terminalError(msg) {
