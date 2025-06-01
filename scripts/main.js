@@ -165,7 +165,6 @@ async function getTokenDecimals(MINT) {
 }
 
 function handleTransactionErrors(err) {
-    ERROR("Error sending or confirming transaction");
     const fullError = err.stack ?? err.toString();
 
     if (fullError.includes("TransactionExpiredBlockheightExceededError"))
