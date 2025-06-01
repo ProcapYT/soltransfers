@@ -68,7 +68,7 @@ async function sendToken(senderKeypair, receiverWallet, TOKEN_MINT, amount) {
         senderKeypair.publicKey
     );
 
-    LOG("Got sender associated token account");
+    LOG(`Got sender associated token account (${sc.yellow(senderKeypair.publicKey)})`);
 
     // token account of the receiver
     const toTokenAccount = await getOrCreateAssociatedTokenAccount(
@@ -78,7 +78,7 @@ async function sendToken(senderKeypair, receiverWallet, TOKEN_MINT, amount) {
         receiverWallet
     );
 
-    LOG("Got receiver associated token account");
+    LOG(`Got receiver associated token account (${sc.yellow(receiverWallet)})`);
 
     const transferIx = createTransferInstruction(
         fromTokenAccount.address,
@@ -169,26 +169,25 @@ function handleTransactionErrors(err) {
     const fullError = err.stack ?? err.toString();
     
     if (fullError.includes("TransactionExpiredBlockheightExceededError")) 
-        terminalError("Blockhash expired before the transaction was confirmed");
+        ERROR("Blockhash expired before the transaction was confirmed");
 
     if (fullError.includes("BlockhashNotFound"))
-        terminalError("Blockhash not found");
+        ERROR("Blockhash not found");
 
     if (fullError.includes("custom program error"))
-        terminalError("The program had an error in the execution");
+        ERROR("The program had an error in the execution");
 
     if (fullError.includes("Transaction signature verification failure"))
-        terminalError("Problem in the verification of the signature");
+        ERROR("Problem in the verification of the signature");
 
     if (fullError.includes("Missing signature for fee payer"))
-        terminalError("No fee payer found in the list");
+        ERROR("No fee payer found in the list");
 
     if (fullError.includes("429") || fullError.includes("Too many requests"))
-        terminalError("You are making to many requests to the RPC");
+        ERROR("You are making to many requests to the RPC");
 
     ERROR("Unknown error");
     console.error(err.message);
-    process.exit(1);
 }
 
 function terminalError(msg) {
@@ -200,7 +199,11 @@ function terminalError(msg) {
 const rawJsonContent = await fs.readFile(path.join(process.cwd(), addressesJsonPath));
 const transactions = JSON.parse(rawJsonContent);
 
-for (const { address, TOKEN_MINT: RAW_TOKEN_MINT, amount } of transactions) {
+for (const transactionData of transactions) {
+    const { address, TOKEN_MINT: RAW_TOKEN_MINT, amount } = transactionData;
+
+    if ("skip" in transactionData && transactionData.skip == true) continue;
+
     const publicAddress = new PublicKey(address);
 
     if (RAW_TOKEN_MINT == "SOLANA") {

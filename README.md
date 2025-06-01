@@ -46,7 +46,8 @@ Here's an example of the inputData.json file, transfer 12 JUP to ADDRESS_1, 5 SO
     {
         "address": "ADDRESS_1",
         "TOKEN_MINT": "JUPyiwrYJFskUPiHa7hkeR8VUtAeFoSYbKedZNsDvCN", // jupiter's mint address
-        "amount": 12
+        "amount": 12,
+        "skip": true // to skip this transaction
     },
     {
         "address": "ADDRESS_2",
