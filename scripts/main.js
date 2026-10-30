@@ -20,10 +20,10 @@ import { input } from "./input.js";
 import { jsonName, fileName, folderName, addressesJsonPath } from "./constants.cjs";
 import path from "node:path";
 import fs from "node:fs/promises";
-import { TokenListProvider } from "solana-token-list";
 import sc from "samcolors";
 import dns from "node:dns/promises";
 import { LOG, ERROR, WARN } from "./customLogs.js";
+import { loadMints, loadAddressbook, mintsFilePath, addressbookFilePath, NATIVE_SYMBOL } from "./addressFiles.js";
 
 // Check if the user has internet connection
 async function hasInternet() {
@@ -42,17 +42,6 @@ if (!await hasInternet()) {
 // .env configuration
 import dotenv from "dotenv";
 dotenv.config();
-
-// Decode private key file with password
-const jsonPath = path.join(process.cwd(), folderName, jsonName);
-const privateKeyFilePath = path.join(process.cwd(), folderName, fileName);
-const password = await input("Security password: ", true);
-const privateKey = await decodeFile(privateKeyFilePath, jsonPath, password);
-
-// sender data
-import bs58 from "bs58";
-const secretKey = bs58.decode(privateKey);
-const senderKeypair = Keypair.fromSecretKey(secretKey);
 
 // connection to the solana network
 const connection = new Connection(clusterApiUrl(process.env.SOLANA_NETWORK), "confirmed");
@@ -120,15 +109,13 @@ async function sendToken(senderKeypair, receiverWallet, TOKEN_MINT, amount) {
     }
 }
 
-async function sendSOL(senderKeypair, receiverWallet, amount) {
+async function sendSOL(senderKeypair, receiverWallet, lamports) {
     const { blockhash, lastValidBlockHeight } = await connection.getLatestBlockhash();
-
-    const amountInLamports = toBaseUnits(amount, 9); // 1 solana equals 1,000,000,000 lamports
 
     const transferIx = SystemProgram.transfer({
         fromPubkey: senderKeypair.publicKey,
         toPubkey: receiverWallet,
-        lamports: amountInLamports,
+        lamports,
     });
 
     LOG("Created transfer instructions");
@@ -158,14 +145,19 @@ function toBaseUnits(amount, decimals) {
     const amountString = String(amount);
 
     if (!/^\d+(\.\d+)?$/.test(amountString))
-        terminalError(`Invalid amount ${sc.yellow(amountString)}`);
+        throw new Error(`invalid amount ${sc.yellow(amountString)}`);
 
     const [whole, fraction = ""] = amountString.split(".");
 
     if (fraction.length > decimals)
-        terminalError(`Amount ${sc.yellow(amountString)} has more than ${decimals} decimals`);
+        throw new Error(`amount ${sc.yellow(amountString)} has more than ${decimals} decimals`);
 
-    return BigInt(whole + fraction.padEnd(decimals, "0"));
+    const baseUnits = BigInt(whole + fraction.padEnd(decimals, "0"));
+
+    if (baseUnits == 0n)
+        throw new Error("amount must be greater than 0");
+
+    return baseUnits;
 }
 
 async function getTokenDecimals(MINT) {
@@ -205,39 +197,102 @@ function terminalError(msg) {
     process.exit(1);
 }
 
-// send the token to the public addresses
-const rawJsonContent = await fs.readFile(path.join(process.cwd(), addressesJsonPath));
-const transactions = JSON.parse(rawJsonContent);
+// Validate every entry and resolve its token before sending anything, so a bad entry can't leave a run half done
+async function prepareTransfers(transactions, mints, addressbook) {
+    const transfers = [];
+    const errors = [];
+    const decimalsBySymbol = new Map([[NATIVE_SYMBOL, 9]]); // 1 solana equals 1,000,000,000 lamports
 
-// fetched lazily, only if there is at least one SPL token transfer
-let tokens;
+    for (const [index, transactionData] of transactions.entries()) {
+        if ("skip" in transactionData && transactionData.skip == true) continue;
 
-for (const transactionData of transactions) {
-    const { address, TOKEN_MINT: RAW_TOKEN_MINT, amount } = transactionData;
+        const where = `entry ${index + 1}`;
+        const { address, token, amount } = transactionData;
 
-    if ("skip" in transactionData && transactionData.skip == true) continue;
-
-    const publicAddress = new PublicKey(address);
-
-    if (RAW_TOKEN_MINT == "SOLANA") {
-        LOG(`Transfering ${sc.yellow(amount + " SOL")}`);
-
-        await sendSOL(senderKeypair, publicAddress, amount);
-    } else {
-        if (!tokens) {
-            const tokenListProvider = new TokenListProvider();
-            const tokenList = await tokenListProvider.resolve();
-            tokens = tokenList.filterByClusterSlug('mainnet-beta').getList();
+        if ("TOKEN_MINT" in transactionData) {
+            errors.push(`${where}: "TOKEN_MINT" is no longer supported, use "token" with a symbol from the mints file (e.g. "token": "USDC")`);
+            continue;
         }
 
-        const TOKEN_MINT = new PublicKey(RAW_TOKEN_MINT);
+        // the address is a name from the addressbook or a raw solana address
+        const contact = typeof address == "string" ? addressbook.get(address.toUpperCase()) : undefined;
+        let receiver = contact?.address;
+        const receiverName = contact?.name ?? address;
 
-        const tokenInfo = tokens.find(token => token.address == TOKEN_MINT);
-        LOG(`Transfering ${sc.yellow(amount + " " + (tokenInfo?.symbol ?? RAW_TOKEN_MINT))}`);
+        if (typeof address != "string") {
+            errors.push(`${where}: missing "address"`);
+        } else if (!receiver) {
+            try {
+                receiver = new PublicKey(address);
+            } catch {
+                errors.push(`${where}: unknown address ${sc.yellow(address)}, it is not a valid solana address nor a name in ${sc.yellow(addressbookFilePath())}`);
+            }
+        }
 
-        const tokenDecimals = await getTokenDecimals(TOKEN_MINT);
-        const tokenAmount = toBaseUnits(amount, tokenDecimals);
+        if (typeof token != "string") {
+            errors.push(`${where}: missing "token"`);
+            continue;
+        }
 
-        const transaction = await sendToken(senderKeypair, publicAddress, TOKEN_MINT, tokenAmount);
+        const key = token.toUpperCase();
+        const tokenData = key == NATIVE_SYMBOL ? { symbol: NATIVE_SYMBOL, mint: null } : mints.get(key);
+
+        if (!tokenData) {
+            errors.push(`${where}: unknown token ${sc.yellow(token)}, add it to ${sc.yellow(mintsFilePath(process.env.SOLANA_NETWORK))}`);
+            continue;
+        }
+
+        if (!decimalsBySymbol.has(key)) {
+            try {
+                decimalsBySymbol.set(key, await getTokenDecimals(tokenData.mint));
+            } catch {
+                decimalsBySymbol.set(key, null);
+                errors.push(`${where}: mint of ${tokenData.symbol} (${sc.yellow(tokenData.mint)}) not found on ${process.env.SOLANA_NETWORK}`);
+                continue;
+            }
+        }
+
+        const decimals = decimalsBySymbol.get(key);
+        if (decimals == null) continue; // mint not found, already reported
+
+        try {
+            const baseUnits = toBaseUnits(amount, decimals);
+            if (receiver) transfers.push({ ...tokenData, receiver, receiverName, amount, baseUnits });
+        } catch (err) {
+            errors.push(`${where}: ${err.message}`);
+        }
     }
+
+    if (errors.length > 0) {
+        ERROR(`Invalid ${sc.yellow(addressesJsonPath)}, nothing has been sent`);
+        errors.forEach(error => console.error("  - " + error));
+        process.exit(1);
+    }
+
+    return transfers;
+}
+
+// validate the transfers before asking for the password
+const mints = await loadMints(process.env.SOLANA_NETWORK);
+const addressbook = await loadAddressbook();
+const rawJsonContent = await fs.readFile(path.join(process.cwd(), addressesJsonPath));
+const transfers = await prepareTransfers(JSON.parse(rawJsonContent), mints, addressbook);
+
+// Decode private key file with password
+const jsonPath = path.join(process.cwd(), folderName, jsonName);
+const privateKeyFilePath = path.join(process.cwd(), folderName, fileName);
+const password = await input("Security password: ", true);
+const privateKey = await decodeFile(privateKeyFilePath, jsonPath, password);
+
+// sender data
+import bs58 from "bs58";
+const secretKey = bs58.decode(privateKey);
+const senderKeypair = Keypair.fromSecretKey(secretKey);
+
+// send the tokens to the public addresses
+for (const { symbol, mint, receiver, receiverName, amount, baseUnits } of transfers) {
+    LOG(`Transfering ${sc.yellow(amount + " " + symbol)} to ${sc.yellow(receiverName)}`);
+
+    if (mint == null) await sendSOL(senderKeypair, receiver, baseUnits);
+    else await sendToken(senderKeypair, receiver, mint, baseUnits);
 }

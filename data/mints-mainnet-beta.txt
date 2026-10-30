@@ -1,6 +1,7 @@
+# Mint addresses for SOLANA_NETWORK=mainnet-beta
+# Format: SYMBOL: mint address (one per line). SOL is native and doesn't need a mint.
 USDC: EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v
 USDT: Es9vMFrzaCERmJfrF4H2FYD4KCoNkY11McCe8BenwNYB
-JUPITER: JUPyiwrYJFskUPiHa7hkeR8VUtAeFoSYbKedZNsDvCN
+JUP: JUPyiwrYJFskUPiHa7hkeR8VUtAeFoSYbKedZNsDvCN
 PYTH: HZ1JovNiVvGrGNiiYvEozEVgZ58xaU3RKwX8eACQBCt3
 NATIX: FRySi8LPkuByB7VPSCCggxpewFUeeJiwEGRKKuhwpKcX
-SOL: SOLANA

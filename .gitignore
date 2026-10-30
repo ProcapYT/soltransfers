@@ -2,5 +2,6 @@ node_modules/
 temp/
 scripts/app.test.js
 data/inputData.json
+data/addressbook.txt
 package-lock.json
 .env

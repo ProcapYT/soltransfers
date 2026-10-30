@@ -1,0 +1,3 @@
+# Mint addresses for SOLANA_NETWORK=devnet
+# Format: SYMBOL: mint address (one per line). SOL is native and doesn't need a mint.
+USDC: 4zMMC9srt5Ri5X14GAgXhaHii3GnPAEERYPJgZJDncDU

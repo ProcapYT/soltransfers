@@ -1,13 +1,13 @@
 [
     {
-        "address": "solana-address-1",
-        "TOKEN_MINT": "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v",
+        "address": "Alice-wallet",
+        "token": "USDC",
         "amount": 1.000000,
         "skip": true
     },
     {
-        "address": "solana-address-2",
-        "TOKEN_MINT": "SOLANA",
+        "address": "Bob-wallet",
+        "token": "SOL",
         "amount": 1.000000
     }
 ]

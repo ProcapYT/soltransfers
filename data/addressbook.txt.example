@@ -1,0 +1,3 @@
+# Recipient addresses. Format: NAME: solana address (one per line). Names are case insensitive.
+Alice-wallet: solana-address-1
+Bob-wallet: solana-address-2

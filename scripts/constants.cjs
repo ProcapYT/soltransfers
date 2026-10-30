@@ -9,5 +9,7 @@ const folderName = "temp";
 
 // transaction constants
 const addressesJsonPath = "data/inputData.json";
+const mintsFolder = "data";
+const addressbookPath = "data/addressbook.txt";
 
-module.exports = { dirname, filename, jsonName, fileName, folderName , addressesJsonPath};
+module.exports = { dirname, filename, jsonName, fileName, folderName, addressesJsonPath, mintsFolder, addressbookPath };
