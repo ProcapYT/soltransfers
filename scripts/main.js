@@ -98,10 +98,8 @@ async function sendToken(senderKeypair, receiverWallet, TOKEN_MINT, amount) {
 
     transaction.sign(senderKeypair);
 
-    let signature;
-
     try {
-        signature = await sendAndConfirmTransaction(
+        const signature = await sendAndConfirmTransaction(
             connection,
             transaction,
             [senderKeypair],
@@ -114,19 +112,18 @@ async function sendToken(senderKeypair, receiverWallet, TOKEN_MINT, amount) {
                 lastValidBlockHeight,
             }
         );
+
+        console.log(sc.bold(sc.green("COMPLETED: ")) + "Transaction successfully made!");
+        return signature;
     } catch (err) {
         handleTransactionErrors(err);
     }
-
-    console.log(sc.bold(sc.green("COMPLETED: ")) + "Transaction successfully made!");
-
-    return signature;
 }
 
 async function sendSOL(senderKeypair, receiverWallet, amount) {
     const { blockhash, lastValidBlockHeight } = await connection.getLatestBlockhash();
 
-    const amountInLamports = amount * 1e9; // 1 solana equals 1,000,000,000 lamports
+    const amountInLamports = toBaseUnits(amount, 9); // 1 solana equals 1,000,000,000 lamports
 
     const transferIx = SystemProgram.transfer({
         fromPubkey: senderKeypair.publicKey,
@@ -138,10 +135,8 @@ async function sendSOL(senderKeypair, receiverWallet, amount) {
 
     const transaction = new Transaction().add(transferIx);
 
-    let signature;
-
     try {
-        signature = await sendAndConfirmTransaction(
+        const signature = await sendAndConfirmTransaction(
             connection,
             transaction,
             [senderKeypair],
@@ -150,13 +145,27 @@ async function sendSOL(senderKeypair, receiverWallet, amount) {
                 lastValidBlockHeight
             }
         );
+
+        console.log(sc.bold(sc.green("COMPLETED: ")) + "Transaction successfully made!");
+        return signature;
     } catch (err) {
         handleTransactionErrors(err);
     }
+}
 
-    console.log(sc.bold(sc.green("COMPLETED: ")) + "Transaction successfully made!");
+// Convert a decimal amount (e.g. 1.5) into integer base units without floating point errors
+function toBaseUnits(amount, decimals) {
+    const amountString = String(amount);
 
-    return signature;
+    if (!/^\d+(\.\d+)?$/.test(amountString))
+        terminalError(`Invalid amount ${sc.yellow(amountString)}`);
+
+    const [whole, fraction = ""] = amountString.split(".");
+
+    if (fraction.length > decimals)
+        terminalError(`Amount ${sc.yellow(amountString)} has more than ${decimals} decimals`);
+
+    return BigInt(whole + fraction.padEnd(decimals, "0"));
 }
 
 async function getTokenDecimals(MINT) {
@@ -200,6 +209,9 @@ function terminalError(msg) {
 const rawJsonContent = await fs.readFile(path.join(process.cwd(), addressesJsonPath));
 const transactions = JSON.parse(rawJsonContent);
 
+// fetched lazily, only if there is at least one SPL token transfer
+let tokens;
+
 for (const transactionData of transactions) {
     const { address, TOKEN_MINT: RAW_TOKEN_MINT, amount } = transactionData;
 
@@ -208,21 +220,23 @@ for (const transactionData of transactions) {
     const publicAddress = new PublicKey(address);
 
     if (RAW_TOKEN_MINT == "SOLANA") {
-        sendSOL(senderKeypair, publicAddress, amount);
-
         LOG(`Transfering ${sc.yellow(amount + " SOL")}`);
+
+        await sendSOL(senderKeypair, publicAddress, amount);
     } else {
-        const tokenListProvider = new TokenListProvider();
-        const tokenList = await tokenListProvider.resolve();
-        const tokens = tokenList.filterByClusterSlug('mainnet-beta').getList();
+        if (!tokens) {
+            const tokenListProvider = new TokenListProvider();
+            const tokenList = await tokenListProvider.resolve();
+            tokens = tokenList.filterByClusterSlug('mainnet-beta').getList();
+        }
 
         const TOKEN_MINT = new PublicKey(RAW_TOKEN_MINT);
 
         const tokenInfo = tokens.find(token => token.address == TOKEN_MINT);
-        LOG(`Transfering ${sc.yellow(amount + " " + tokenInfo?.symbol)}`);
+        LOG(`Transfering ${sc.yellow(amount + " " + (tokenInfo?.symbol ?? RAW_TOKEN_MINT))}`);
 
         const tokenDecimals = await getTokenDecimals(TOKEN_MINT);
-        const tokenAmount = amount * 10 ** tokenDecimals;
+        const tokenAmount = toBaseUnits(amount, tokenDecimals);
 
         const transaction = await sendToken(senderKeypair, publicAddress, TOKEN_MINT, tokenAmount);
     }

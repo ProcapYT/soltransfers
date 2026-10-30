@@ -3,3 +3,4 @@ temp/
 scripts/app.test.js
 data/inputData.json
 package-lock.json
+.env

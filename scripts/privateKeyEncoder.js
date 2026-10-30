@@ -69,11 +69,11 @@ export async function encodeFile(text, encodedFilePath, jsonPath, password) {
 }
 
 export async function decodeFile(encodedFilePath, jsonPath, password) {
-    const encodedFileContent = await fs.readFile(encodedFilePath, "utf-8");
-    const jsonContent = JSON.parse(await fs.readFile(jsonPath, "utf-8"));
-
     await checkFileExistance(encodedFilePath);
     await checkFileExistance(jsonPath);
+
+    const encodedFileContent = await fs.readFile(encodedFilePath, "utf-8");
+    const jsonContent = JSON.parse(await fs.readFile(jsonPath, "utf-8"));
     
     const decoding = decodeText({ salt: jsonContent.salt, iv: jsonContent.iv, tag: jsonContent.tag, data: encodedFileContent }, password);
     return decoding;
